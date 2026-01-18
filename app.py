@@ -114,3 +114,49 @@ if df is not None:
 
 else:
     st.warning("請先上傳檔案或勾選模擬資料。")
+
+    # ... (接續原本 result_df 產出後的程式碼) ...
+                
+                st.markdown("---")
+                st.subheader("🔍 課表查詢功能")
+                
+                # 建立兩欄版面
+                q_col1, q_col2 = st.columns([1, 3])
+                
+                with q_col1:
+                    query_type = st.radio("查詢模式", ["依班級查課表", "依老師查課表"])
+                
+                with q_col2:
+                    if query_type == "依班級查課表":
+                        # 抓出所有班級選單
+                        class_list = sorted(result_df['班級'].unique())
+                        target = st.selectbox("請選擇班級", class_list)
+                        # 篩選資料
+                        final_view = result_df[result_df['班級'] == target]
+                        
+                    else: # 依老師
+                        # 抓出所有老師選單
+                        teacher_list = sorted(result_df['老師'].unique())
+                        target = st.selectbox("請選擇老師", teacher_list)
+                        # 篩選資料
+                        final_view = result_df[result_df['老師'] == target]
+
+                # 顯示篩選後的課表 (使用 Pivot Table 讓它長得像真的課表)
+                st.write(f"### 📋 {target} 的課表")
+                
+                # 製作成週課表格式 (列=節次, 欄=星期)
+                # 處理資料以便 pivot
+                pivot_df = final_view.pivot(index='節次', columns='星期', values='科目')
+                
+                # 定義正確的排序 (週一~週五, 第1節~第N節)
+                days_order = ['週一', '週二', '週三', '週四', '週五']
+                periods_order = [f'第 {i} 節' for i in range(1, 10)] # 預設支援到第9節
+                
+                # 重新索引確保順序正確 (只保留資料中有的欄位)
+                existing_days = [d for d in days_order if d in pivot_df.columns]
+                existing_periods = [p for p in periods_order if p in pivot_df.index]
+                
+                pivot_df = pivot_df.reindex(columns=existing_days, index=existing_periods)
+                
+                # 顯示漂亮的課表
+                st.table(pivot_df.fillna("")) # 空堂顯示空白
